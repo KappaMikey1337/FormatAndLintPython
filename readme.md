@@ -13,6 +13,8 @@ Ensure you have a version of Pip capable of using the required versions of the t
 All the required packages are stored within `requirements.txt`. You can install them using:\
 `python3 -m pip install -r requirements.txt`
 
+This scripts also expects the existence of a `/tmp` directory that it can write to.
+
 # Usage
 Calling this file with no arguments will prepare every file
 that has been altered within your working branch since diverging
