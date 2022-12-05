@@ -1,0 +1,15 @@
+[tool.isort]
+py_version = 38
+line_length = 88
+profile = "black"
+
+
+[tool.black]
+line-length = 88
+target-version = ["py38"]
+quiet = true
+
+
+[flake8]
+max-line-length = 88
+kwargs-max-positional-arguments = 4
