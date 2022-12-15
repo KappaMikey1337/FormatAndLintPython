@@ -37,6 +37,21 @@ class PathNotFoundError(Exception):
         self.message = f"Error: file {self.path} does not exist."
 
 
+class DuplicatePathError(Exception):
+     """
+     This class defines a custom error,
+     which is presented when files have the same name.
+     """
+
+     def __init__(self, name: str) -> None:
+         """
+         Args:
+             name: The name that exists across multiple files.
+         """
+         self.name = name
+         self.message = f"Error: Duplicate file names: {self.name}"
+
+
 def main() -> int:
     """
     This program prepares a branch for merging
@@ -122,14 +137,14 @@ def main() -> int:
     else:
         filesToPass = list(getFilesToFormat(args.since))
 
-    for fileToPass in filesToPass:
-        tmpFileLocation = Path(
-            (
-                f"/tmp/presubmit"
-                f"{str(fileToPass.parent.resolve()).replace('/','.')}."
-                f"{fileToPass.name}"
-            )
-        )
+        filenames = [path.name for path in filesToPass]
+         for filename in filenames:
+             if filenames.count(filename) > 1:
+                 raise DuplicatePathError(filename)
+
+     for fileToPass in filesToPass:
+        fullPath = str(fileToPass.parent.resolve()).split("/")
+        tmpFileLocation = Path(f"/tmp/presubmit.{fullPath[2]}.{fileToPass.name}")
 
         print(f"Checking {fileToPass}...")
         with open(fileToPass, "r", encoding="utf8") as workingFile:
@@ -145,7 +160,7 @@ def main() -> int:
         with open(fileToPass, "w", encoding="utf8") as workingFile:
             workingFile.write(toolOutput.data)
         print(
-            f"Successfully formatted {fileToPass.name}. "
+            f"Successfully formatted {fileToPass.name}.\n"
             f"The original file can be found at: {tmpFileLocation}"
         )
 
@@ -167,9 +182,9 @@ def runAnalyzers(code: str, mode: Mode) -> ToolOutput:
     and running them on the provided code.
 
     Args:
-        code (str): The code that the tools will be run against.
+        code: The code that the tools will be run against.
 
-        mode (Mode): Specifies which tools to run.
+        mode: Specifies which tools to run.
 
     Returns:
         ToolOutput: If any tool fails:

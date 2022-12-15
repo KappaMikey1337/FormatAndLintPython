@@ -409,7 +409,12 @@ confidence=HIGH,
 # --enable=similarities". If you want to run only the classes checker, but have
 # no Warning level messages displayed, use "--disable=all --enable=classes
 # --disable=W".
-disable=too-many-branches,
+disable=too-many-ancestors,
+        too-many-locals,
+        attribute-defined-outside-init,
+        too-few-public-methods,
+        too-many-arguments,
+        too-many-branches,
         missing-module-docstring,
         raw-checker-failed,
         bad-inline-option,
@@ -570,7 +575,11 @@ ignored-checks-for-mixins=no-member,
 # List of class names for which member attributes should not be checked (useful
 # for classes with dynamically set attributes). This supports the use of
 # qualified names.
-ignored-classes=optparse.Values,thread._local,_thread._local,argparse.Namespace
+ignored-classes=optparse.Values,
+                 thread._local,
+                 _thread._local,
+                 argparse.Namespace,
+                 twisted.internet.reactor
 
 # Show a hint with possible names when a member name was not found. The aspect
 # of finding the hint is based on edit distance.
