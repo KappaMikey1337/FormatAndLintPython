@@ -30,8 +30,8 @@ class PathNotFoundError(Exception):
     def __init__(self, path: Path) -> None:
         """
         Args:
-            path (Path): The Path object representing the file
-                         that does not exist.
+            path: The Path object representing the file
+                  that does not exist.
         """
         self.path = path.resolve()
         self.message = f"Error: file {self.path} does not exist."
@@ -187,18 +187,18 @@ def runAnalyzers(code: str, mode: Mode) -> ToolOutput:
     and running them on the provided code.
 
     Args:
-        code (str): The code that the tools will be run against.
+        code: The code that the tools will be run against.
 
-        mode (Mode): Specifies which tools to run.
+        mode: Specifies which tools to run.
 
     Returns:
-        ToolOutput: If any tool fails:
-                        Return the exit code of the last command run,
-                        the command itself, and the output of the tool
-                        that failed.
-                    Otherwise:
-                        Return an exit code of 0, a blank command,
-                        and the updated code string.
+        If any tool fails:
+            Return the exit code of the last command run,
+            the command itself, and the output of the tool
+            that failed.
+        Otherwise:
+            Return an exit code of 0, a blank command,
+            and the updated code string.
     """
     if mode not in (mode.ALL, mode.LINT):
         raise ValueError(f"Error: Encountered an unexpected mode: {mode}")
@@ -212,7 +212,7 @@ def runAnalyzers(code: str, mode: Mode) -> ToolOutput:
         if result.returnCode != 0:
             return result
 
-    return ToolOutput(returnCode=0, command=[], data=code)
+    return ToolOutput(0, [], code)
 
 
 if __name__ == "__main__":

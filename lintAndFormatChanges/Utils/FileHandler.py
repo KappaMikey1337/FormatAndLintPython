@@ -46,11 +46,11 @@ def getMergeBase(start: str, end: str = "HEAD") -> str:
     This function gets the merge base of two commits.
 
     Args:
-        start (str): The first reference point (valid git identifier).
-        end (str):   The second reference point (valid git identifier).
+        start: The first reference point (valid git identifier).
+        end:   The second reference point (valid git identifier).
 
     Returns:
-        str: The merge base of the two reference points.
+        The merge base of the two reference points.
     """
     try:
         return (
@@ -67,11 +67,11 @@ def getChangedFiles(fromCommit: str, toCommit: str = "HEAD") -> List[Path]:
     that have changed between two commits.
 
     Args:
-        fromCommit (str): The starting commit.
-        toCommit (str):   The ending commit.
+        fromCommit: The starting commit.
+        toCommit:   The ending commit.
 
     Returns:
-        List[Path]: The list of all the files that have changed.
+        The list of all the files that have changed.
     """
     try:
         pathStrings = (
@@ -98,7 +98,7 @@ def getAllTrackedFiles() -> List[Path]:
     that are currently being tracked by Git.
 
     Returns:
-        List[Path]: The list of all the files that are tracked by Git.
+        The list of all the files that are tracked by Git.
     """
     try:
         pathStrings = (
@@ -123,11 +123,11 @@ def getGlobsFromFile(globlistFile: Path) -> Set[Path]:
     This function resolves a list of glob patterns from a file.
 
     Args:
-        globlistFile (Path): The file that contains the glob patterns
-                             to resolve.
+        globlistFile: The file that contains the glob patterns
+                      to resolve.
 
     Returns:
-        Set[Path]: The set of all unique paths that result from the glob.
+        The set of all unique paths that result from the glob.
     """
     globStrings = globlistFile.read_text().split("\n")
     pathSet: Set[Path] = set()
@@ -147,7 +147,7 @@ def getFormattablePaths() -> Set[Path]:
     denylisted Paths.
 
     Returns:
-        Set[Path]: The set of valid Paths to be used.
+        The set of valid Paths to be used.
     """
     allowlistPaths = getGlobsFromFile(ALLOWLISTPATH)
     denylistPaths = getGlobsFromFile(DENYLISTPATH)
@@ -160,11 +160,11 @@ def getFilesToFormat(changedSince: str) -> Set[Path]:
     This function gets the set of files that will be formatted by presubmit.
 
     Args:
-        changedSince (str): The starting commit to compare against
-                            when getting the set of files changed.
+        changedSince: The starting commit to compare against
+                      when getting the set of files changed.
 
     Returns:
-        Set[Path]: The set of files to be formatted.
+        The set of files to be formatted.
     """
     mergeBase = getMergeBase(changedSince)
     changedFiles = getChangedFiles(mergeBase)
@@ -179,7 +179,7 @@ def getTrackedFormattablePaths() -> Set[Path]:
     and are tracked by Git.
 
     Returns:
-        Set[Path]: The set of files that are tracked and can be formatted.
+        The set of files that are tracked and can be formatted.
     """
     trackedFiles = getAllTrackedFiles()
     formattablePaths = getFormattablePaths()
