@@ -5,7 +5,7 @@ from enum import Enum, auto
 from pathlib import Path
 
 from .Tools import ToolOutput, fmt, lint, verify
-from .Utils import getFilesToFormat
+from .Utils import getFilesToFormat, getTmpDir
 
 
 class Mode(Enum):
@@ -38,18 +38,18 @@ class PathNotFoundError(Exception):
 
 
 class DuplicatePathError(Exception):
-     """
-     This class defines a custom error,
-     which is presented when files have the same name.
-     """
+    """
+    This class defines a custom error,
+    which is presented when files have the same name.
+    """
 
-     def __init__(self, name: str) -> None:
-         """
-         Args:
-             name: The name that exists across multiple files.
-         """
-         self.name = name
-         self.message = f"Error: Duplicate file names: {self.name}"
+    def __init__(self, name: str) -> None:
+        """
+        Args:
+            name: The name that exists across multiple files.
+        """
+        self.name = name
+        self.message = f"Error: Duplicate file names: {self.name}"
 
 
 def main() -> int:
@@ -138,13 +138,18 @@ def main() -> int:
         filesToPass = list(getFilesToFormat(args.since))
 
         filenames = [path.name for path in filesToPass]
-         for filename in filenames:
-             if filenames.count(filename) > 1:
-                 raise DuplicatePathError(filename)
+        for filename in set(filenames):
+            if filenames.count(filename) > 1:
+                raise DuplicatePathError(filename)
 
-     for fileToPass in filesToPass:
-        fullPath = str(fileToPass.parent.resolve()).split("/")
-        tmpFileLocation = Path(f"/tmp/presubmit.{fullPath[2]}.{fileToPass.name}")
+    tmpPath = Path("/tmp/presubmit")
+    try:
+        revisionDir = getTmpDir(tmpPath)
+    except ValueError:
+        return -1
+
+    for fileToPass in filesToPass:
+        tmpFileLocation = revisionDir / fileToPass.name
 
         print(f"Checking {fileToPass}...")
         with open(fileToPass, "r", encoding="utf8") as workingFile:
@@ -160,8 +165,8 @@ def main() -> int:
         with open(fileToPass, "w", encoding="utf8") as workingFile:
             workingFile.write(toolOutput.data)
         print(
-            f"Successfully formatted {fileToPass.name}.\n"
-            f"The original file can be found at: {tmpFileLocation}"
+            f"Successfully formatted {fileToPass}!\n"
+            f"The original file can be found at: {tmpFileLocation.resolve()}"
         )
 
         if mode in (Mode.ALL, Mode.LINT):
@@ -182,9 +187,9 @@ def runAnalyzers(code: str, mode: Mode) -> ToolOutput:
     and running them on the provided code.
 
     Args:
-        code: The code that the tools will be run against.
+        code (str): The code that the tools will be run against.
 
-        mode: Specifies which tools to run.
+        mode (Mode): Specifies which tools to run.
 
     Returns:
         ToolOutput: If any tool fails:
@@ -207,7 +212,7 @@ def runAnalyzers(code: str, mode: Mode) -> ToolOutput:
         if result.returnCode != 0:
             return result
 
-    return ToolOutput(0, [], code)
+    return ToolOutput(returnCode=0, command=[], data=code)
 
 
 if __name__ == "__main__":

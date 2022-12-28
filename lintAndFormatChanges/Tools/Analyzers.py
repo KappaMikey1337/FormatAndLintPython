@@ -29,6 +29,7 @@ def _flake(code: str) -> ToolOutput:
 def _pylint(code: str) -> ToolOutput:
     # This is needed for pylint to recognize our relative imports
     os.environ["PYTHONPATH"] = str(Path("master/").resolve())
+
     pylintCmd = [
         "python3",
         "-m",
@@ -46,7 +47,6 @@ def _pylint(code: str) -> ToolOutput:
         text=True,
         check=False,
     )
-
     del os.environ["PYTHONPATH"]
 
     return ToolOutput(pylintProcess.returncode, pylintCmd[:-1], pylintProcess.stdout)
@@ -68,15 +68,15 @@ def lint(code: str) -> ToolOutput:
     Specifically, against both flake8 and pylint.
 
     Args:
-        code: The code to lint.
+        code (str): The code to lint.
 
     Returns:
-        If any tool fails:
-            Return the exit code of the last command run,
-            the command itself, and the code string.
-        Otherwise:
-            Return an exit code of 0, a blank command,
-            and the updated code string.
+        ToolOutput: If any tool fails:
+                        Return the exit code of the last command run,
+                        the command itself, and the code string.
+                    Otherwise:
+                        Return an exit code of 0, a blank command,
+                        and the updated code string.
     """
     result = _flake(code)
     if result.returnCode != 0:
@@ -95,15 +95,15 @@ def verify(code: str) -> ToolOutput:
     on the provided code string.
 
     Args:
-        code: The code to analyze.
+        code (str): The code to analyze.
 
     Returns:
-        If any tool fails:
-            Return the exit code of the last command run,
-            the command itself, and the code.
-        Otherwise:
-            Return an exit code of 0, a blank command,
-            and the updated code string.
+        ToolOutput: If any tool fails:
+                        Return the exit code of the last command run,
+                        the command itself, and the code.
+                    Otherwise:
+                        Return an exit code of 0, a blank command,
+                        and the updated code string.
     """
     result = _mypy(code)
     if result.returnCode != 0:

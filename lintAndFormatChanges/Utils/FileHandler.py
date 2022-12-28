@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 from glob import glob
@@ -8,16 +9,48 @@ ALLOWLISTPATH = Path(__file__).parent / "../config/allowlist.txt"
 DENYLISTPATH = Path(__file__).parent / "../config/denylist.txt"
 
 
+def getTmpDir(baseDir: Path) -> Path:
+    """
+    This function creates the directory to store
+    the original copies of files before they are altered.
+
+    Args:
+        baseDir: The base directory to work inside of.
+
+    Returns:
+        The directory to to store files into.
+    """
+    userTmpDir = baseDir / os.getlogin()
+    userTmpDir.mkdir(parents=True, exist_ok=True)
+    subdirs = []
+    for subdir in userTmpDir.iterdir():
+        try:
+            subdirs.append(int(subdir.name))
+        except ValueError as invalidDir:
+            print(
+                f"Error: unexpected sub-directory '{subdir.name}'\n"
+                f"{userTmpDir.resolve()} should only contain numbered directories.",
+                file=sys.stderr,
+            )
+            raise invalidDir
+
+    revision = max(subdirs) + 1 if subdirs else 0
+    revisionDir = userTmpDir / str(revision)
+    revisionDir.mkdir()
+
+    return revisionDir
+
+
 def getMergeBase(start: str, end: str = "HEAD") -> str:
     """
     This function gets the merge base of two commits.
 
     Args:
-        start: The first reference point (valid git identifier).
-        end:   The second reference point (valid git identifier).
+        start (str): The first reference point (valid git identifier).
+        end (str):   The second reference point (valid git identifier).
 
     Returns:
-        The merge base of the two reference points.
+        str: The merge base of the two reference points.
     """
     try:
         return (
@@ -34,11 +67,11 @@ def getChangedFiles(fromCommit: str, toCommit: str = "HEAD") -> List[Path]:
     that have changed between two commits.
 
     Args:
-        fromCommit: The starting commit.
-        toCommit:   The ending commit.
+        fromCommit (str): The starting commit.
+        toCommit (str):   The ending commit.
 
     Returns:
-        The list of all the files that have changed.
+        List[Path]: The list of all the files that have changed.
     """
     try:
         pathStrings = (
@@ -65,7 +98,7 @@ def getAllTrackedFiles() -> List[Path]:
     that are currently being tracked by Git.
 
     Returns:
-        The list of all the files that are tracked by Git.
+        List[Path]: The list of all the files that are tracked by Git.
     """
     try:
         pathStrings = (
@@ -90,11 +123,11 @@ def getGlobsFromFile(globlistFile: Path) -> Set[Path]:
     This function resolves a list of glob patterns from a file.
 
     Args:
-        globlistFile: The file that contains the glob patterns
-                      to resolve.
+        globlistFile (Path): The file that contains the glob patterns
+                             to resolve.
 
     Returns:
-        The set of all unique paths that result from the glob.
+        Set[Path]: The set of all unique paths that result from the glob.
     """
     globStrings = globlistFile.read_text().split("\n")
     pathSet: Set[Path] = set()
@@ -114,7 +147,7 @@ def getFormattablePaths() -> Set[Path]:
     denylisted Paths.
 
     Returns:
-        The set of valid Paths to be used.
+        Set[Path]: The set of valid Paths to be used.
     """
     allowlistPaths = getGlobsFromFile(ALLOWLISTPATH)
     denylistPaths = getGlobsFromFile(DENYLISTPATH)
@@ -127,11 +160,11 @@ def getFilesToFormat(changedSince: str) -> Set[Path]:
     This function gets the set of files that will be formatted by presubmit.
 
     Args:
-        changedSince: The starting commit to compare against
-                      when getting the set of files changed.
+        changedSince (str): The starting commit to compare against
+                            when getting the set of files changed.
 
     Returns:
-        The set of files to be formatted.
+        Set[Path]: The set of files to be formatted.
     """
     mergeBase = getMergeBase(changedSince)
     changedFiles = getChangedFiles(mergeBase)
@@ -146,7 +179,7 @@ def getTrackedFormattablePaths() -> Set[Path]:
     and are tracked by Git.
 
     Returns:
-        The set of files that are tracked and can be formatted.
+        Set[Path]: The set of files that are tracked and can be formatted.
     """
     trackedFiles = getAllTrackedFiles()
     formattablePaths = getFormattablePaths()

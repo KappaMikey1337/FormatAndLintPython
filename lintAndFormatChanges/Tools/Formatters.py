@@ -9,7 +9,7 @@ def _removeNewLinesFromFile(code: str) -> str:
     as the formatters do not remove extra newlines.
 
     Args:
-        code: The code that will be stripped of double newlines.
+        code (str): The code that will be stripped of double newlines.
     """
     lines = code.split("\n")
 
@@ -75,16 +75,16 @@ def fmt(code: str) -> ToolOutput:
     and reformats the rest of the code with black.
 
     Args:
-        code: The code to format.
+        code (str): The code to format.
 
     Returns:
-        If any tool fails:
-            Return the exit code of the last command run,
-            the command itself, and the output of the tool
-            that failed.
-        Otherwise:
-            Return an exit code of 0, a blank command,
-            and the updated code string.
+        ToolOutput: If any tool fails:
+                        Return the exit code of the last command run,
+                        the command itself, and the output of the tool
+                        that failed.
+                    Otherwise:
+                        Return an exit code of 0, a blank command,
+                        and the updated code string.
     """
     code = _removeNewLinesFromFile(code)
 
