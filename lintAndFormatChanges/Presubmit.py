@@ -3,9 +3,10 @@ import shutil
 import sys
 from enum import Enum, auto
 from pathlib import Path
+from tempfile import gettempdir
 
 from .Tools import ToolOutput, fmt, lint, verify
-from .Utils import getFilesToFormat, getTmpDir
+from .Utils import getFilesToFormat, createTmpDir
 
 
 class Mode(Enum):
@@ -142,17 +143,17 @@ def main() -> int:
             if filenames.count(filename) > 1:
                 raise DuplicatePathError(filename)
 
-    tmpPath = Path("/tmp/presubmit")
+    tmpPath = Path(gettempdir(), "presubmit")
     try:
-        revisionDir = getTmpDir(tmpPath)
+        revisionDir = createTmpDir(tmpPath)
     except ValueError:
-        return -1
+        return 1
 
     for fileToPass in filesToPass:
         tmpFileLocation = revisionDir / fileToPass.name
 
         print(f"Checking {fileToPass}...")
-        with open(fileToPass, "r", encoding="utf8") as workingFile:
+        with fileToPass.open("r", encoding="utf-8") as workingFile:
             code = workingFile.read()
 
         # run formatting tool and overwrite the file
@@ -162,7 +163,7 @@ def main() -> int:
             return toolOutput.returnCode
 
         shutil.copyfile(fileToPass, tmpFileLocation)
-        with open(fileToPass, "w", encoding="utf8") as workingFile:
+        with fileToPass.open("w", encoding="utf-8") as workingFile:
             workingFile.write(toolOutput.data)
         print(
             f"Successfully formatted {fileToPass}!\n"

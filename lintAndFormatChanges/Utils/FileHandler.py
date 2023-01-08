@@ -1,4 +1,4 @@
-import os
+import getpass
 import subprocess
 import sys
 from glob import glob
@@ -9,18 +9,24 @@ ALLOWLISTPATH = Path(__file__).parent / "../config/allowlist.txt"
 DENYLISTPATH = Path(__file__).parent / "../config/denylist.txt"
 
 
-def getTmpDir(baseDir: Path) -> Path:
+def createTmpDir(baseDir: Path) -> Path:
     """
-    This function creates the directory to store
-    the original copies of files before they are altered.
+    This function creates a numbered directory
+    based on the current user's username. The
+    directory is created before being returned
+    to the user.
 
     Args:
         baseDir: The base directory to work inside of.
 
     Returns:
         The directory to to store files into.
+
+    Raises:
+        ValueError: If a directory exists where the numbered directory is created,
+                    and it itself is not a numbered directory.
     """
-    userTmpDir = baseDir / os.getlogin()
+    userTmpDir = baseDir / getpass.getuser()
     userTmpDir.mkdir(parents=True, exist_ok=True)
     subdirs = []
     for subdir in userTmpDir.iterdir():
@@ -28,7 +34,7 @@ def getTmpDir(baseDir: Path) -> Path:
             subdirs.append(int(subdir.name))
         except ValueError as invalidDir:
             print(
-                f"Error: unexpected sub-directory '{subdir.name}'\n"
+                f"Error: unexpected sub-directory '{subdir}'\n"
                 f"{userTmpDir.resolve()} should only contain numbered directories.",
                 file=sys.stderr,
             )
@@ -51,6 +57,10 @@ def getMergeBase(start: str, end: str = "HEAD") -> str:
 
     Returns:
         The merge base of the two reference points.
+
+    Raises:
+        subprocess.CalledProcessError: if there is an error when using subprocess
+        to get the merge-base.
     """
     try:
         return (
@@ -99,6 +109,10 @@ def getAllTrackedFiles() -> List[Path]:
 
     Returns:
         The list of all the files that are tracked by Git.
+
+    Raises:
+        subprocess.CalledProcessError: if there is an error when using subprocess
+        to get the list of tracked files.
     """
     try:
         pathStrings = (

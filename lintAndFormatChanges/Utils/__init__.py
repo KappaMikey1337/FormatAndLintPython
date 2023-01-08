@@ -1,3 +1,3 @@
-from .FileHandler import getFilesToFormat, getTmpDir, getTrackedFormattablePaths
+from .FileHandler import createTmpDir, getFilesToFormat, getTrackedFormattablePaths
 
-__all__ = ["getFilesToFormat", "getTmpDir", "getTrackedFormattablePaths"]
+__all__ = ["createTmpDir", "getFilesToFormat", "getTrackedFormattablePaths"]
