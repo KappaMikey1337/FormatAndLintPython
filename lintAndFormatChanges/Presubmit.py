@@ -6,7 +6,7 @@ from pathlib import Path
 from tempfile import gettempdir
 
 from .Tools import ToolOutput, fmt, lint, verify
-from .Utils import getFilesToFormat, createTmpDir
+from .Utils import createTmpDir, getFilesToFormat, getTrackedFormattablePaths
 
 
 class Mode(Enum):
@@ -62,7 +62,7 @@ def main() -> int:
     that has been altered within your working branch since diverging
     from main.
 
-    Args:
+    fileArgs:
         --since <base>: Sets the starting point the script uses to determine
                         which files have changed. This can be a commit hash,
                         branch name, HEAD~3, etc. By default, this is set
@@ -71,7 +71,9 @@ def main() -> int:
         --file <file>:  Only run the script on the specified file, even if
                         the file is normally ignored by the script.
 
-    Mutually Exclusive Args:
+        --all:          Run on all the Python files that are tracked by the repo.
+
+    toolingArgs:
         --format: Only run formatting.
 
         --lint:   Only run formatting and linting.
@@ -92,7 +94,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(
         prog="Presubmit.py", description="Prepares file(s) for merging"
     )
-    parser.add_argument(
+
+    # Arguments that affect the files checked
+    fileArgs = parser.add_mutually_exclusive_group()
+    fileArgs.add_argument(
         "--since",
         default="main",
         help="only run on the files changed since this point. \
@@ -100,7 +105,7 @@ def main() -> int:
               (commit hash, branch name, HEAD~3, etc).",
         metavar="<base>",
     )
-    parser.add_argument(
+    fileArgs.add_argument(
         "--file",
         action="store",
         help="only run on the specified file.",
@@ -108,14 +113,20 @@ def main() -> int:
         type=Path,
     )
 
-    # mutually exclusive arguments
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument(
+    fileArgs.add_argument(
+        "--all",
+        action="store_true",
+        help="run on all tracked Python files.",
+    )
+
+    # Arguments that affect to the tooling used
+    toolingArgs = parser.add_mutually_exclusive_group()
+    toolingArgs.add_argument(
         "--format",
         action="store_true",
         help="only run formatting.",
     )
-    group.add_argument(
+    toolingArgs.add_argument(
         "--lint",
         action="store_true",
         help="only run formatting and linting.",
@@ -131,7 +142,9 @@ def main() -> int:
         mode = Mode.ALL
 
     # Determine what file(s) to use
-    if args.file is not None:
+    if args.all is True:
+        filesToPass = list(getTrackedFormattablePaths())
+    elif args.file is not None:
         if not args.file.exists():
             raise PathNotFoundError(args.file)
         filesToPass = [args.file]

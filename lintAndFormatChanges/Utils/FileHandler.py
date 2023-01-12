@@ -11,21 +11,21 @@ DENYLISTPATH = Path(__file__).parent / "../config/denylist.txt"
 
 def createTmpDir(baseDir: Path) -> Path:
     """
-    This function creates a numbered directory
-    based on the current user's username. The
-    directory is created before being returned
-    to the user.
+     This function creates a numbered directory
+     based on the current user's username. The
+     directory is created before being returned
+     to the user.
 
-    Args:
-        baseDir: The base directory to work inside of.
+     Args:
+         baseDir: The base directory to work inside of.
 
-    Returns:
-        The directory to to store files into.
+     Returns:
+         The directory to to store files into.
 
-    Raises:
-        ValueError: If a directory exists where the numbered directory is created,
-                    and it itself is not a numbered directory.
-    """
+     Raises:
+         ValueError: If a non-numbered directory exists where the numbered directory
+                     will be created.
+     """
     userTmpDir = baseDir / getpass.getuser()
     userTmpDir.mkdir(parents=True, exist_ok=True)
     subdirs = []
@@ -59,8 +59,8 @@ def getMergeBase(start: str, end: str = "HEAD") -> str:
         The merge base of the two reference points.
 
     Raises:
-        subprocess.CalledProcessError: if there is an error when using subprocess
-        to get the merge-base.
+        subprocess.CalledProcessError: If there is an error when using subprocess
+        							   to get the merge-base.
     """
     try:
         return (
@@ -93,7 +93,7 @@ def getChangedFiles(fromCommit: str, toCommit: str = "HEAD") -> List[Path]:
             .split("\n")
         )
     except subprocess.CalledProcessError as e:
-        print("Error occurred while getting changed files.")
+        print("Error occurred while getting changed files.", file=sys.stderr)
         raise e
 
     changed = [Path(pathString) for pathString in pathStrings]
@@ -111,8 +111,8 @@ def getAllTrackedFiles() -> List[Path]:
         The list of all the files that are tracked by Git.
 
     Raises:
-        subprocess.CalledProcessError: if there is an error when using subprocess
-        to get the list of tracked files.
+        subprocess.CalledProcessError: If there is an error when using subprocess
+									   to get the list of tracked files.
     """
     try:
         pathStrings = (
@@ -124,7 +124,7 @@ def getAllTrackedFiles() -> List[Path]:
             .split("\n")
         )
     except subprocess.CalledProcessError as e:
-        print("Error occurred while getting tracked files.")
+        print("Error occurred while getting tracked files.", file=sys.stderr)
         raise e
 
     tracked = [Path(pathString) for pathString in pathStrings]
