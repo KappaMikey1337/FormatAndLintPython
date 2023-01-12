@@ -55,9 +55,7 @@ def _pylint(code: str) -> ToolOutput:
 def _mypy(code: str) -> ToolOutput:
     # mypy expects the code to be part of the command
     mypyCmd = ["python3", "-m", "mypy", "--command", code]
-    mypyProcess = subprocess.run(
-        mypyCmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False
-    )
+    mypyProcess = subprocess.run(mypyCmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False)
 
     return ToolOutput(mypyProcess.returncode, mypyCmd[:-1], mypyProcess.stdout.decode())
 

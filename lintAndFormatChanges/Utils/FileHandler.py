@@ -11,21 +11,21 @@ DENYLISTPATH = Path(__file__).parent / "../config/denylist.txt"
 
 def createTmpDir(baseDir: Path) -> Path:
     """
-     This function creates a numbered directory
-     based on the current user's username. The
-     directory is created before being returned
-     to the user.
+    This function creates a numbered directory
+    based on the current user's username. The
+    directory is created before being returned
+    to the user.
 
-     Args:
-         baseDir: The base directory to work inside of.
+    Args:
+        baseDir: The base directory to work inside of.
 
-     Returns:
-         The directory to to store files into.
+    Returns:
+        The directory to to store files into.
 
-     Raises:
-         ValueError: If a non-numbered directory exists where the numbered directory
-                     will be created.
-     """
+    Raises:
+        ValueError: If a non-numbered directory exists where the numbered directory
+                    will be created.
+    """
     userTmpDir = baseDir / getpass.getuser()
     userTmpDir.mkdir(parents=True, exist_ok=True)
     subdirs = []
@@ -60,12 +60,10 @@ def getMergeBase(start: str, end: str = "HEAD") -> str:
 
     Raises:
         subprocess.CalledProcessError: If there is an error when using subprocess
-        							   to get the merge-base.
+                                       to get the merge-base.
     """
     try:
-        return (
-            subprocess.check_output(["git", "merge-base", start, end]).strip().decode()
-        )
+        return subprocess.check_output(["git", "merge-base", start, end]).strip().decode()
     except subprocess.CalledProcessError as e:
         print("Error occurred while getting merge base of commits.", file=sys.stderr)
         raise e
@@ -85,12 +83,7 @@ def getChangedFiles(fromCommit: str, toCommit: str = "HEAD") -> List[Path]:
     """
     try:
         pathStrings = (
-            subprocess.check_output(
-                ["git", "diff", "--name-only", fromCommit, toCommit]
-            )
-            .strip()
-            .decode()
-            .split("\n")
+            subprocess.check_output(["git", "diff", "--name-only", fromCommit, toCommit]).strip().decode().split("\n")
         )
     except subprocess.CalledProcessError as e:
         print("Error occurred while getting changed files.", file=sys.stderr)
@@ -112,13 +105,11 @@ def getAllTrackedFiles() -> List[Path]:
 
     Raises:
         subprocess.CalledProcessError: If there is an error when using subprocess
-									   to get the list of tracked files.
+                                       to get the list of tracked files.
     """
     try:
         pathStrings = (
-            subprocess.check_output(
-                ["git", "ls-tree", "-r", "--full-tree", "--name-only", "HEAD"]
-            )
+            subprocess.check_output(["git", "ls-tree", "-r", "--full-tree", "--name-only", "HEAD"])
             .strip()
             .decode()
             .split("\n")

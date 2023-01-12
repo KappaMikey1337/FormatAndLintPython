@@ -91,9 +91,7 @@ def main() -> int:
         Verification:
             1. mypy
     """
-    parser = argparse.ArgumentParser(
-        prog="Presubmit.py", description="Prepares file(s) for merging"
-    )
+    parser = argparse.ArgumentParser(prog="Presubmit.py", description="Prepares file(s) for merging")
 
     # Arguments that affect the files checked
     fileArgs = parser.add_mutually_exclusive_group()
@@ -179,8 +177,7 @@ def main() -> int:
         with fileToPass.open("w", encoding="utf-8") as workingFile:
             workingFile.write(toolOutput.data)
         print(
-            f"Successfully formatted {fileToPass}!\n"
-            f"The original file can be found at: {tmpFileLocation.resolve()}"
+            f"Successfully formatted {fileToPass}!\n" f"The original file can be found at: {tmpFileLocation.resolve()}"
         )
 
         if mode in (Mode.ALL, Mode.LINT):
