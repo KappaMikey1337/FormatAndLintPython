@@ -6,7 +6,7 @@ from .ToolOutput import ToolOutput
 
 
 def _flake(code: str) -> ToolOutput:
-    flakeCmd = [
+    flake_cmd = [
         "python3",
         "-m",
         "flake8",
@@ -14,8 +14,8 @@ def _flake(code: str) -> ToolOutput:
         "lintAndFormatChanges/config/flake.toml",
         "-",
     ]
-    flakeProcess = subprocess.run(
-        flakeCmd,
+    flake_process = subprocess.run(
+        flake_cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         input=code,
@@ -23,14 +23,14 @@ def _flake(code: str) -> ToolOutput:
         check=False,
     )
 
-    return ToolOutput(flakeProcess.returncode, flakeCmd[:-1], flakeProcess.stdout)
+    return ToolOutput(flake_process.returncode, flake_cmd[:-1], flake_process.stdout)
 
 
 def _pylint(code: str) -> ToolOutput:
     # This is needed for pylint to recognize our relative imports
-    os.environ["PYTHONPATH"] = str(Path("master/").resolve())
+    os.environ["PYTHONPATH"] = Path("master").resolve().as_posix()
 
-    pylintCmd = [
+    pylint_cmd = [
         "python3",
         "-m",
         "pylint",
@@ -39,8 +39,8 @@ def _pylint(code: str) -> ToolOutput:
         "--from-stdin",
         "True",
     ]
-    pylintProcess = subprocess.run(
-        pylintCmd,
+    pylint_process = subprocess.run(
+        pylint_cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         input=code,
@@ -49,15 +49,15 @@ def _pylint(code: str) -> ToolOutput:
     )
     del os.environ["PYTHONPATH"]
 
-    return ToolOutput(pylintProcess.returncode, pylintCmd[:-1], pylintProcess.stdout)
+    return ToolOutput(pylint_process.returncode, pylint_cmd[:-1], pylint_process.stdout)
 
 
 def _mypy(code: str) -> ToolOutput:
     # mypy expects the code to be part of the command
-    mypyCmd = ["python3", "-m", "mypy", "--command", code]
-    mypyProcess = subprocess.run(mypyCmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False)
+    mypy_cmd = ["python3", "-m", "mypy", "--command", code]
+    mypy_process = subprocess.run(mypy_cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, check=False)
 
-    return ToolOutput(mypyProcess.returncode, mypyCmd[:-1], mypyProcess.stdout.decode())
+    return ToolOutput(mypy_process.returncode, mypy_cmd[:-1], mypy_process.stdout.decode())
 
 
 def lint(code: str) -> ToolOutput:
@@ -77,11 +77,11 @@ def lint(code: str) -> ToolOutput:
             and the updated code string.
     """
     result = _flake(code)
-    if result.returnCode != 0:
+    if result.return_code != 0:
         return result
 
     result = _pylint(code)
-    if result.returnCode != 0:
+    if result.return_code != 0:
         return result
 
     return ToolOutput(0, [], code)
@@ -104,7 +104,7 @@ def verify(code: str) -> ToolOutput:
             and the updated code string.
     """
     result = _mypy(code)
-    if result.returnCode != 0:
+    if result.return_code != 0:
         return result
 
     return ToolOutput(0, [], code)

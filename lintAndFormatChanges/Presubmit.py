@@ -6,7 +6,7 @@ from pathlib import Path
 from tempfile import gettempdir
 
 from .Tools import ToolOutput, fmt, lint, verify
-from .Utils import createTmpDir, getFilesToFormat, getTrackedFormattablePaths
+from .Utils import create_tmp_dir, get_files_to_format, get_tracked_formattable_paths
 
 
 class Mode(Enum):
@@ -62,7 +62,7 @@ def main() -> int:
     that has been altered within your working branch since diverging
     from main.
 
-    fileArgs:
+    file_args:
         --since <base>: Sets the starting point the script uses to determine
                         which files have changed. This can be a commit hash,
                         branch name, HEAD~3, etc. By default, this is set
@@ -73,7 +73,7 @@ def main() -> int:
 
         --all:          Run on all the Python files that are tracked by the repo.
 
-    toolingArgs:
+    tooling_args:
         --format: Only run formatting.
 
         --lint:   Only run formatting and linting.
@@ -94,8 +94,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(prog="Presubmit.py", description="Prepares file(s) for merging")
 
     # Arguments that affect the files checked
-    fileArgs = parser.add_mutually_exclusive_group()
-    fileArgs.add_argument(
+    file_args = parser.add_mutually_exclusive_group()
+    file_args.add_argument(
         "--since",
         default="main",
         help="only run on the files changed since this point. \
@@ -103,7 +103,7 @@ def main() -> int:
               (commit hash, branch name, HEAD~3, etc).",
         metavar="<base>",
     )
-    fileArgs.add_argument(
+    file_args.add_argument(
         "--file",
         action="store",
         help="only run on the specified file.",
@@ -111,20 +111,20 @@ def main() -> int:
         type=Path,
     )
 
-    fileArgs.add_argument(
+    file_args.add_argument(
         "--all",
         action="store_true",
         help="run on all tracked Python files.",
     )
 
     # Arguments that affect to the tooling used
-    toolingArgs = parser.add_mutually_exclusive_group()
-    toolingArgs.add_argument(
+    tooling_args = parser.add_mutually_exclusive_group()
+    tooling_args.add_argument(
         "--format",
         action="store_true",
         help="only run formatting.",
     )
-    toolingArgs.add_argument(
+    tooling_args.add_argument(
         "--lint",
         action="store_true",
         help="only run formatting and linting.",
@@ -141,60 +141,60 @@ def main() -> int:
 
     # Determine what file(s) to use
     if args.all is True:
-        filesToPass = list(getTrackedFormattablePaths())
+        files_to_pass = list(get_tracked_formattable_paths())
     elif args.file is not None:
         if not args.file.exists():
             raise PathNotFoundError(args.file)
-        filesToPass = [args.file]
+        files_to_pass = [args.file]
     else:
-        filesToPass = list(getFilesToFormat(args.since))
+        files_to_pass = list(get_files_to_format(args.since))
 
-        filenames = [path.name for path in filesToPass]
+        filenames = [path.name for path in files_to_pass]
         for filename in set(filenames):
             if filenames.count(filename) > 1:
                 raise DuplicatePathError(filename)
 
-    tmpPath = Path(gettempdir(), "presubmit")
+    tmp_path = Path(gettempdir(), "presubmit")
     try:
-        revisionDir = createTmpDir(tmpPath)
-    except ValueError as tmpDirError:
-        print(tmpDirError, file=sys.stderr)
+        revision_dir = create_tmp_dir(tmp_path)
+    except ValueError as tmp_dir_error:
+        print(tmp_dir_error, file=sys.stderr)
         return 1
 
-    for fileToPass in filesToPass:
-        tmpFileLocation = revisionDir / fileToPass.name
+    for file_to_pass in files_to_pass:
+        tmp_file_location = revision_dir / file_to_pass.name
 
-        print(f"Checking {fileToPass}...")
-        with fileToPass.open("r", encoding="utf-8") as workingFile:
-            code = workingFile.read()
+        print(f"Checking {file_to_pass}...")
+        with file_to_pass.open("r", encoding="utf-8") as working_file:
+            code = working_file.read()
 
         # run formatting tool and overwrite the file
-        toolOutput = fmt(code)
-        if toolOutput.returnCode != 0:
-            print(toolOutput.data, file=sys.stderr)
-            return toolOutput.returnCode
+        tool_output = fmt(code)
+        if tool_output.return_code != 0:
+            print(tool_output.data, file=sys.stderr)
+            return tool_output.return_code
 
-        shutil.copyfile(fileToPass, tmpFileLocation)
-        with fileToPass.open("w", encoding="utf-8") as workingFile:
-            workingFile.write(toolOutput.data)
+        shutil.copyfile(file_to_pass, tmp_file_location)
+        with file_to_pass.open("w", encoding="utf-8") as working_file:
+            working_file.write(tool_output.data)
         print(
-            f"Successfully formatted {fileToPass}!\n"
-            f"The original file can be found at: {tmpFileLocation.resolve()}"
+            f"Successfully formatted {file_to_pass}!\n"
+            f"The original file can be found at: {tmp_file_location.resolve()}"
         )
 
         if mode in (Mode.ALL, Mode.LINT):
-            toolOutput = runAnalyzers(toolOutput.data, mode)
-            if toolOutput.returnCode != 0:
-                print(toolOutput.data, file=sys.stderr)
-                print(f"Failed to validate {fileToPass}.")
-                return toolOutput.returnCode
+            tool_output = run_analyzers(tool_output.data, mode)
+            if tool_output.return_code != 0:
+                print(tool_output.data, file=sys.stderr)
+                print(f"Failed to validate {file_to_pass}.")
+                return tool_output.return_code
 
-            print(f"Validated {fileToPass} successfully.")
+            print(f"Validated {file_to_pass} successfully.")
 
     return 0
 
 
-def runAnalyzers(code: str, mode: Mode) -> ToolOutput:
+def run_analyzers(code: str, mode: Mode) -> ToolOutput:
     """
     This function is responsible for determining which tools to run
     and running them on the provided code.
@@ -217,12 +217,12 @@ def runAnalyzers(code: str, mode: Mode) -> ToolOutput:
         raise ValueError(f"Error: Encountered an unexpected mode: {mode}")
 
     result = lint(code)
-    if result.returnCode != 0:
+    if result.return_code != 0:
         return result
 
     if mode == Mode.ALL:
         result = verify(code)
-        if result.returnCode != 0:
+        if result.return_code != 0:
             return result
 
     return ToolOutput(0, [], code)

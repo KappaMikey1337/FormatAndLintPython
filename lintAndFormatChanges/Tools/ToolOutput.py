@@ -22,6 +22,6 @@ class ToolOutput:
                              by the tools.
     """
 
-    returnCode: int
+    return_code: int
     command: List[str]
     data: str

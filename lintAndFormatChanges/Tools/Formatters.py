@@ -3,7 +3,7 @@ import subprocess
 from .ToolOutput import ToolOutput
 
 
-def _removeNewLinesFromFile(code: str) -> str:
+def _remove_newlines_from_file(code: str) -> str:
     """
     This function removes any double newlines from the given code,
     as the formatters do not remove extra newlines.
@@ -26,7 +26,7 @@ def _removeNewLinesFromFile(code: str) -> str:
 
 
 def _isort(code: str) -> ToolOutput:
-    isortCmd = [
+    isort_cmd = [
         "python3",
         "-m",
         "isort",
@@ -34,8 +34,8 @@ def _isort(code: str) -> ToolOutput:
         "lintAndFormatChanges/config/isort.toml",
         "-",
     ]
-    isortProcess = subprocess.run(
-        isortCmd,
+    isort_process = subprocess.run(
+        isort_cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         input=code,
@@ -43,11 +43,11 @@ def _isort(code: str) -> ToolOutput:
         check=False,
     )
 
-    return ToolOutput(isortProcess.returncode, isortCmd[:-1], isortProcess.stdout)
+    return ToolOutput(isort_process.returncode, isort_cmd[:-1], isort_process.stdout)
 
 
 def _black(code: str) -> ToolOutput:
-    blackCmd = [
+    black_cmd = [
         "python3",
         "-m",
         "black",
@@ -55,8 +55,8 @@ def _black(code: str) -> ToolOutput:
         "lintAndFormatChanges/config/black.toml",
         "-",
     ]
-    blackProcess = subprocess.run(
-        blackCmd,
+    black_process = subprocess.run(
+        black_cmd,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         input=code,
@@ -64,7 +64,7 @@ def _black(code: str) -> ToolOutput:
         check=False,
     )
 
-    return ToolOutput(blackProcess.returncode, blackCmd[:-1], blackProcess.stdout)
+    return ToolOutput(black_process.returncode, black_cmd[:-1], black_process.stdout)
 
 
 def fmt(code: str) -> ToolOutput:
@@ -86,10 +86,10 @@ def fmt(code: str) -> ToolOutput:
             Return an exit code of 0, a blank command,
             and the updated code string.
     """
-    code = _removeNewLinesFromFile(code)
+    code = _remove_newlines_from_file(code)
 
     result = _isort(code)
-    if result.returnCode != 0:
+    if result.return_code != 0:
         return result
 
     result = _black(code)
