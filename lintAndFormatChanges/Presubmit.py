@@ -157,7 +157,8 @@ def main() -> int:
     tmpPath = Path(gettempdir(), "presubmit")
     try:
         revisionDir = createTmpDir(tmpPath)
-    except ValueError:
+    except ValueError as tmpDirError:
+        print(tmpDirError, file=sys.stderr)
         return 1
 
     for fileToPass in filesToPass:
@@ -177,7 +178,8 @@ def main() -> int:
         with fileToPass.open("w", encoding="utf-8") as workingFile:
             workingFile.write(toolOutput.data)
         print(
-            f"Successfully formatted {fileToPass}!\n" f"The original file can be found at: {tmpFileLocation.resolve()}"
+            f"Successfully formatted {fileToPass}!\n"
+            f"The original file can be found at: {tmpFileLocation.resolve()}"
         )
 
         if mode in (Mode.ALL, Mode.LINT):

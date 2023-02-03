@@ -33,12 +33,11 @@ def createTmpDir(baseDir: Path) -> Path:
         try:
             subdirs.append(int(subdir.name))
         except ValueError as invalidDir:
-            print(
+            errorMessage = (
                 f"Error: unexpected sub-directory '{subdir}'\n"
-                f"{userTmpDir.resolve()} should only contain numbered directories.",
-                file=sys.stderr,
+                f"{userTmpDir.resolve()} should only contain numbered directories."
             )
-            raise invalidDir
+            raise invalidDir(errorMessage)
 
     revision = max(subdirs) + 1 if subdirs else 0
     revisionDir = userTmpDir / str(revision)
