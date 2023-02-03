@@ -6,8 +6,8 @@ from pathlib import Path
 from tempfile import gettempdir
 from typing import List
 
-from .Tools import ToolOutput, fmt, lint, verify
-from .Utils import create_tmp_dir, get_files_to_format, get_tracked_formattable_paths
+from lintAndFormatChanges.Tools import ToolOutput, fmt, lint, verify
+from lintAndFormatChanges.Utils import create_tmp_dir, get_files_to_format, get_tracked_formattable_paths
 
 
 class Mode(Enum):

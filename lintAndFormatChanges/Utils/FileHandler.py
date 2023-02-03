@@ -32,12 +32,12 @@ def create_tmp_dir(base_dir: Path) -> Path:
     for subdir in user_tmp_dir.iterdir():
         try:
             subdirs.append(int(subdir.name))
-        except ValueError as invalidDir:
+        except ValueError:
             errorMessage = (
                 f"Error: unexpected sub-directory '{subdir}'\n"
                 f"{user_tmp_dir.resolve()} should only contain numbered directories."
             )
-            raise invalidDir(errorMessage)
+            raise ValueError(errorMessage)
 
     revision = max(subdirs) + 1 if subdirs else 0
     revision_dir = user_tmp_dir / str(revision)
