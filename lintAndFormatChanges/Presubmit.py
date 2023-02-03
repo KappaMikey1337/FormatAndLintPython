@@ -4,6 +4,7 @@ import sys
 from enum import Enum, auto
 from pathlib import Path
 from tempfile import gettempdir
+from typing import List
 
 from .Tools import ToolOutput, fmt, lint, verify
 from .Utils import create_tmp_dir, get_files_to_format, get_tracked_formattable_paths
@@ -53,11 +54,8 @@ class DuplicatePathError(Exception):
         self.message = f"Error: Duplicate file names: {self.name}"
 
 
-def main() -> int:
+def get_arguments():
     """
-    This program prepares a branch for merging
-    by formatting, linting, and statically analyzing Python code.
-
     Calling this file with no arguments will prepare every file
     that has been altered within your working branch since diverging
     from main.
@@ -129,16 +127,25 @@ def main() -> int:
         action="store_true",
         help="only run formatting and linting.",
     )
+    return parser.parse_args()
 
-    args = parser.parse_args()
 
-    if args.format:
-        mode = Mode.FORMAT
-    elif args.lint:
-        mode = Mode.LINT
-    else:
-        mode = Mode.ALL
+def determine_file_list(args) -> List[Path]:
+    """
+    This function determines what files the script will run on
+    based on the arguments passed.
 
+    Args:
+        args: The arguments parsed by the script.
+
+    Returns:
+        The list of files to run the script on.
+
+    Raises:
+        PathNotFoundError:  The path passed to the script does not exist.
+
+        DuplicatePathError: There exists 2 or more files with the same name.
+    """
     # Determine what file(s) to use
     if args.all is True:
         files_to_pass = list(get_tracked_formattable_paths())
@@ -149,10 +156,28 @@ def main() -> int:
     else:
         files_to_pass = list(get_files_to_format(args.since))
 
+        # ensure no duplicate filenames
         filenames = [path.name for path in files_to_pass]
         for filename in set(filenames):
             if filenames.count(filename) > 1:
                 raise DuplicatePathError(filename)
+    return files_to_pass
+
+
+def main() -> int:
+    """
+    This program prepares a branch for merging
+    by formatting, linting, and statically analyzing Python code.
+    """
+
+    args = get_arguments()
+
+    if args.format:
+        mode = Mode.FORMAT
+    elif args.lint:
+        mode = Mode.LINT
+    else:
+        mode = Mode.ALL
 
     tmp_path = Path(gettempdir(), "presubmit")
     try:
@@ -160,6 +185,8 @@ def main() -> int:
     except ValueError as tmp_dir_error:
         print(tmp_dir_error, file=sys.stderr)
         return 1
+
+    files_to_pass = determine_file_list(args)
 
     for file_to_pass in files_to_pass:
         tmp_file_location = revision_dir / file_to_pass.name
