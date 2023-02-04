@@ -30,7 +30,7 @@ def _isort(code: str) -> ToolOutput:
         "python3",
         "-m",
         "isort",
-        "-sp",
+        "--settings-file",
         "lintAndFormatChanges/config/isort.toml",
         "-",
     ]
@@ -92,6 +92,7 @@ def fmt(code: str) -> ToolOutput:
     if result.return_code != 0:
         return result
 
+    code = result.data
     result = _black(code)
 
     return result

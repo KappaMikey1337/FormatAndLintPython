@@ -27,9 +27,6 @@ def _flake(code: str) -> ToolOutput:
 
 
 def _pylint(code: str) -> ToolOutput:
-    # This is needed for pylint to recognize our relative imports
-    os.environ["PYTHONPATH"] = Path("master").resolve().as_posix()
-
     pylint_cmd = [
         "python3",
         "-m",
@@ -47,7 +44,6 @@ def _pylint(code: str) -> ToolOutput:
         text=True,
         check=False,
     )
-    del os.environ["PYTHONPATH"]
 
     return ToolOutput(pylint_process.returncode, pylint_cmd[:-1], pylint_process.stdout)
 
