@@ -6,7 +6,7 @@ from pathlib import Path
 from tempfile import gettempdir
 from typing import List
 
-from lintAndFormatChanges.Tools import ToolOutput, fmt, lint, verify
+from lintAndFormatChanges.Tools import fmt, lint, verify
 from lintAndFormatChanges.Utils import create_tmp_dir, get_files_to_format, get_tracked_formattable_paths
 
 
@@ -209,7 +209,7 @@ def main() -> int:
 
         # run formatting tool and overwrite the file
         if mode in (Mode.ALL, Mode.FORMAT):
-            result = run_format(code)
+            result = fmt(code)
             if result.return_code != 0:
                 print(result.data, file=sys.stderr)
                 return result.return_code
@@ -224,7 +224,7 @@ def main() -> int:
             )
 
         if mode in (Mode.ALL, Mode.LINT):
-            result = run_lint(code)
+            result = lint(code)
             if result.return_code != 0:
                 print(result.data, file=sys.stderr)
                 print(f"Failed to lint {file_to_pass}.")
@@ -233,7 +233,7 @@ def main() -> int:
             print(f"Linted {file_to_pass} successfully.")
 
         if mode in (Mode.ALL, Mode.VERIFY):
-            result = run_verify(code)
+            result = verify(code)
             if result.return_code != 0:
                 print(result.data, file=sys.stderr)
                 print(f"Failed to verify {file_to_pass}.")
@@ -244,65 +244,6 @@ def main() -> int:
         print("")
 
     return 0
-
-
-def run_format(code: str) -> ToolOutput:
-    """
-    This function is responsible for formatting the provided code.
-
-    Args:
-        code: The code that the formatter will be run against.
-
-    Returns:
-        If the formatter fails:
-            Return the exit code of the last command run,
-            the command itself, and the output of the formatter.
-        Otherwise:
-            Return an exit code of 0, a blank command,
-            and the updated code string.
-    """
-    result = fmt(code)
-    return result
-
-
-def run_lint(code: str) -> ToolOutput:
-    """
-    This function is responsible for linting the provided code.
-
-    Args:
-        code: The code that the tools will be run against.
-
-    Returns:
-        If any tool fails:
-            Return the exit code of the last command run,
-            the command itself, and the output of the tool
-            that failed.
-        Otherwise:
-            Return an exit code of 0, a blank command,
-            and the updated code string.
-    """
-    result = lint(code)
-    return result
-
-
-def run_verify(code: str) -> ToolOutput:
-    """
-    This function is responsible for verifying the provided code.
-
-    Args:
-        code: The code that the tools will be run against.
-
-    Returns:
-        If any tool fails:
-            Return the exit code of the last command run,
-            the command itself, and the output of the tool
-            that failed.
-        Otherwise:
-            Return an exit code of 0, a blank command,
-            and the updated code string.
-    """
-    result = verify(code)
-    return result
 
 
 if __name__ == "__main__":
