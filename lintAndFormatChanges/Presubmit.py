@@ -21,6 +21,7 @@ class Mode(Enum):
     ALL = auto()
     FORMAT = auto()
     LINT = auto()
+    VERIFY = auto()
 
 
 class PathNotFoundError(Exception):
@@ -69,14 +70,18 @@ def get_arguments():
         --file <file>:  Only run the script on the specified file, even if
                         the file is normally ignored by the script.
 
-        --all:          Run on all the Python files that are tracked by the repo.
+        --all-files:    Run on all the Python files that are tracked by the repo.
 
     tooling_args:
-        --format: Only run formatting.
+        --format: Run formatting.
 
-        --lint:   Only run formatting and linting.
+        --lint:   Run formatting and linting.
 
-    Tools used:
+        --verify  Run static analysis.
+
+        Passing no tooling arguments will run all tools.
+
+    Tools in use:
         Formatting:
             1. Remove double newlines (\n\n)
             2. Sort imports (isort)
@@ -110,7 +115,7 @@ def get_arguments():
     )
 
     file_args.add_argument(
-        "--all",
+        "--all-files",
         action="store_true",
         help="run on all tracked Python files.",
     )
@@ -120,17 +125,22 @@ def get_arguments():
     tooling_args.add_argument(
         "--format",
         action="store_true",
-        help="only run formatting.",
+        help="run formatting.",
     )
     tooling_args.add_argument(
         "--lint",
         action="store_true",
-        help="only run formatting and linting.",
+        help="run linting.",
+    )
+    tooling_args.add_argument(
+        "--verify",
+        action="store_true",
+        help="run static analyzer.",
     )
     return parser.parse_args()
 
 
-def determine_file_list(args) -> List[Path]:
+def determine_file_list(args: argparse.Namespace) -> List[Path]:
     """
     This function determines what files the script will run on
     based on the arguments passed.
@@ -147,7 +157,7 @@ def determine_file_list(args) -> List[Path]:
         DuplicatePathError: There exists 2 or more files with the same name.
     """
     # Determine what file(s) to use
-    if args.all is True:
+    if args.all_files is True:
         files_to_pass = list(get_tracked_formattable_paths())
     elif args.file is not None:
         if not args.file.exists():
@@ -176,6 +186,8 @@ def main() -> int:
         mode = Mode.FORMAT
     elif args.lint:
         mode = Mode.LINT
+    elif args.verify:
+        mode = Mode.VERIFY
     else:
         mode = Mode.ALL
 
@@ -196,40 +208,69 @@ def main() -> int:
             code = working_file.read()
 
         # run formatting tool and overwrite the file
-        tool_output = fmt(code)
-        if tool_output.return_code != 0:
-            print(tool_output.data, file=sys.stderr)
-            return tool_output.return_code
+        if mode in (Mode.ALL, Mode.FORMAT):
+            result = run_format(code)
+            if result.return_code != 0:
+                print(result.data, file=sys.stderr)
+                return result.return_code
 
-        shutil.copyfile(file_to_pass, tmp_file_location)
-        with file_to_pass.open("w", encoding="utf-8") as working_file:
-            working_file.write(tool_output.data)
-        print(
-            f"Successfully formatted {file_to_pass}!\n"
-            f"The original file can be found at: {tmp_file_location.resolve()}"
-        )
+            code = result.data
+            shutil.copyfile(file_to_pass, tmp_file_location)
+            with file_to_pass.open("w", encoding="utf-8") as working_file:
+                working_file.write(code)
+            print(
+                f"Successfully formatted {file_to_pass}!\n"
+                f"The original file can be found at: {tmp_file_location.resolve()}"
+            )
 
         if mode in (Mode.ALL, Mode.LINT):
-            tool_output = run_analyzers(tool_output.data, mode)
-            if tool_output.return_code != 0:
-                print(tool_output.data, file=sys.stderr)
-                print(f"Failed to validate {file_to_pass}.")
-                return tool_output.return_code
+            result = run_lint(code)
+            if result.return_code != 0:
+                print(result.data, file=sys.stderr)
+                print(f"Failed to lint {file_to_pass}.")
+                return result.return_code
+
+            print(f"Linted {file_to_pass} successfully.")
+
+        if mode in (Mode.ALL, Mode.VERIFY):
+            result = run_verify(code)
+            if result.return_code != 0:
+                print(result.data, file=sys.stderr)
+                print(f"Failed to verify {file_to_pass}.")
+                return result.return_code
 
             print(f"Validated {file_to_pass} successfully.")
+
+        print("")
 
     return 0
 
 
-def run_analyzers(code: str, mode: Mode) -> ToolOutput:
+def run_format(code: str) -> ToolOutput:
     """
-    This function is responsible for determining which tools to run
-    and running them on the provided code.
+    This function is responsible for formatting the provided code.
+
+    Args:
+        code: The code that the formatter will be run against.
+
+    Returns:
+        If the formatter fails:
+            Return the exit code of the last command run,
+            the command itself, and the output of the formatter.
+        Otherwise:
+            Return an exit code of 0, a blank command,
+            and the updated code string.
+    """
+    result = fmt(code)
+    return result
+
+
+def run_lint(code: str) -> ToolOutput:
+    """
+    This function is responsible for linting the provided code.
 
     Args:
         code: The code that the tools will be run against.
-
-        mode: Specifies which tools to run.
 
     Returns:
         If any tool fails:
@@ -240,19 +281,28 @@ def run_analyzers(code: str, mode: Mode) -> ToolOutput:
             Return an exit code of 0, a blank command,
             and the updated code string.
     """
-    if mode not in (mode.ALL, mode.LINT):
-        raise ValueError(f"Error: Encountered an unexpected mode: {mode}")
-
     result = lint(code)
-    if result.return_code != 0:
-        return result
+    return result
 
-    if mode == Mode.ALL:
-        result = verify(code)
-        if result.return_code != 0:
-            return result
 
-    return ToolOutput(0, [], code)
+def run_verify(code: str) -> ToolOutput:
+    """
+    This function is responsible for verifying the provided code.
+
+    Args:
+        code: The code that the tools will be run against.
+
+    Returns:
+        If any tool fails:
+            Return the exit code of the last command run,
+            the command itself, and the output of the tool
+            that failed.
+        Otherwise:
+            Return an exit code of 0, a blank command,
+            and the updated code string.
+    """
+    result = verify(code)
+    return result
 
 
 if __name__ == "__main__":

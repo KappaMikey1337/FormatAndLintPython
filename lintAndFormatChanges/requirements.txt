@@ -1,0 +1,6 @@
+black~=24.4
+flake8~=6.0
+isort~=5.10
+mypy~=0.991
+mypy-extensions~=0.4
+pylint~=2.15
