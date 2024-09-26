@@ -32,12 +32,12 @@ def create_tmp_dir(base_dir: Path) -> Path:
     for subdir in user_tmp_dir.iterdir():
         try:
             subdirs.append(int(subdir.name))
-        except ValueError:
-            errorMessage = (
+        except ValueError as exc:
+            error_message = (
                 f"Error: unexpected sub-directory '{subdir}'\n"
                 f"{user_tmp_dir.resolve()} should only contain numbered directories."
             )
-            raise ValueError(errorMessage)
+            raise ValueError(error_message) from exc
 
     revision = max(subdirs) + 1 if subdirs else 0
     revision_dir = user_tmp_dir / str(revision)
@@ -118,6 +118,7 @@ def get_all_tracked_files() -> List[Path]:
         raise e
 
     tracked = [Path(path_string) for path_string in path_strings]
+    tracked = [path for path in tracked if path.exists()]
 
     return tracked
 
@@ -146,7 +147,7 @@ def get_globs_from_file(globlist_file: Path) -> Set[Path]:
 
 def get_formattable_paths() -> Set[Path]:
     """
-    This function gets the set of all files that can be seen by presubmit.
+    This function gets the set of all files that can be seen.
     It will resolve all allowlisted globs and all denylisted globs,
     and return allowlisted Paths that don't also appear in the glob of
     denylisted Paths.
@@ -162,7 +163,7 @@ def get_formattable_paths() -> Set[Path]:
 
 def get_files_to_format(changed_since: str) -> Set[Path]:
     """
-    This function gets the set of files that will be formatted by presubmit.
+    This function gets the set of files that will be formatted.
 
     Args:
         changed_since: The starting commit to compare against
@@ -180,8 +181,8 @@ def get_files_to_format(changed_since: str) -> Set[Path]:
 
 def get_tracked_formattable_paths() -> Set[Path]:
     """
-    This function gets the set of files that can be formatted by presubmit
-    and are tracked by Git.
+    This function gets the set of files that can be formatted and
+    are tracked by Git.
 
     Returns:
         The set of files that are tracked and can be formatted.

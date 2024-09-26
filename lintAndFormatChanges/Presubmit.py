@@ -1,13 +1,14 @@
 import argparse
 import shutil
 import sys
+from collections.abc import Mapping
 from enum import Enum, auto
 from pathlib import Path
 from tempfile import gettempdir
-from typing import List
 
-from lintAndFormatChanges.Tools import fmt, lint, verify
-from lintAndFormatChanges.Utils import create_tmp_dir, get_files_to_format, get_tracked_formattable_paths
+from git import Repo
+from lintAndFormatChanges.tools import fmt, lint, verify
+from lintAndFormatChanges.utils import create_tmp_dir, get_files_to_format, get_tracked_formattable_paths
 
 
 class Mode(Enum):
@@ -22,6 +23,7 @@ class Mode(Enum):
     FORMAT = auto()
     LINT = auto()
     VERIFY = auto()
+    CHECK = auto()
 
 
 class PathNotFoundError(Exception):
@@ -81,6 +83,9 @@ def get_arguments():
 
         Passing no tooling arguments will run all tools.
 
+    behaviour_args:
+        --check   Run formatter. Exit if formatter makes changes.
+
     Tools in use:
         Formatting:
             1. Remove double newlines (\n\n)
@@ -121,7 +126,7 @@ def get_arguments():
     )
 
     # Arguments that affect to the tooling used
-    tooling_args = parser.add_mutually_exclusive_group()
+    tooling_args = parser.add_argument_group()
     tooling_args.add_argument(
         "--format",
         action="store_true",
@@ -137,23 +142,28 @@ def get_arguments():
         action="store_true",
         help="run static analyzer.",
     )
+
+    # Arguments that affect the behaviour of the script
+    behaviour_args = parser.add_argument_group()
+    behaviour_args.add_argument(
+        "--check",
+        action="store_true",
+        help="run formatting. Exit if formatters make changes.",
+    )
+
     return parser.parse_args()
 
 
-def determine_file_list(args: argparse.Namespace) -> List[Path]:
+def determine_file_list(args: argparse.Namespace) -> list[Path]:
     """
     This function determines what files the script will run on
     based on the arguments passed.
-
     Args:
         args: The arguments parsed by the script.
-
     Returns:
         The list of files to run the script on.
-
     Raises:
         PathNotFoundError:  The path passed to the script does not exist.
-
         DuplicatePathError: There exists 2 or more files with the same name.
     """
     # Determine what file(s) to use
@@ -166,12 +176,90 @@ def determine_file_list(args: argparse.Namespace) -> List[Path]:
     else:
         files_to_pass = list(get_files_to_format(args.since))
 
-        # ensure no duplicate filenames
-        filenames = [path.name for path in files_to_pass]
-        for filename in set(filenames):
-            if filenames.count(filename) > 1:
-                raise DuplicatePathError(filename)
     return files_to_pass
+
+
+def check_handler(check: bool, old_code: str, new_code: str, file_to_write: Path, copy_location: Path) -> bool:
+    """
+    This function handles the check argument.
+    Args:
+        check:          Whether --check was passed.
+        old_code:       The code before formatting.
+        new_code:       The code after formatting.
+        file_to_write:  The original file to write the new code to.
+        copy_location:  The location to copy the original file to.
+
+    Returns:
+        True if no issues are found, False if an issue is found.
+    """
+    if check is False:
+        shutil.copyfile(file_to_write, copy_location)
+        with file_to_write.open("w", encoding="utf-8") as working_file:
+            working_file.write(new_code)
+    else:
+        if hash(old_code) != hash(new_code):
+            return False
+
+    return True
+
+
+def presubmit_handler(
+    files_to_pass: list[Path], repo_name: str, revision_dir: Path, config: Mapping[Mode, bool]
+) -> int:
+    """
+    Runs the presubmit checks on the collected files.
+    Args:
+        files_to_pass:  The list of files to run the script on.
+        repo_name:      The name of the repository.
+        revision_dir:   The temporary directory to store the files.
+        config:         The configuration of the script.
+
+    Returns:
+        0 if the script runs successfully, 1 if an error occurs.
+    """
+    for file_to_pass in files_to_pass:
+        # Convert each file's path to repo_root/location/to/file
+        file_to_pass_full = file_to_pass.resolve()
+        index = file_to_pass_full.parts.index(repo_name)
+        tmp_file = Path(*file_to_pass_full.parts[index:])
+
+        tmp_file_location = revision_dir / tmp_file
+        tmp_file_location.parent.mkdir(parents=True, exist_ok=True)
+
+        print(f"Checking {file_to_pass}...", end="\r")
+        with file_to_pass.open("r", encoding="utf-8") as working_file:
+            code = working_file.read()
+
+        # run formatting tool and overwrite the file
+        if True in (config.get(Mode.ALL), config.get(Mode.FORMAT)):
+            result = fmt(code)
+            if result.return_code != 0:
+                print(result.data, file=sys.stderr)
+                return result.return_code
+
+            if check_handler(config[Mode.CHECK], code, result.data, file_to_pass, tmp_file_location) is False:
+                print(f"Failed check on {file_to_pass}. Formatter made changes.", file=sys.stderr)
+                return 1
+
+            code = result.data
+
+        if True in (config.get(Mode.ALL), config.get(Mode.LINT)):
+            result = lint(file_to_pass)
+            if result.return_code != 0:
+                print(result.data, file=sys.stderr)
+                print(f"Failed to lint {file_to_pass}.")
+                return result.return_code
+
+        if True in (config.get(Mode.ALL), config.get(Mode.VERIFY)):
+            result = verify(file_to_pass)
+            if result.return_code != 0:
+                print(result.data, file=sys.stderr)
+                print(f"Failed to verify {file_to_pass}.")
+                return result.return_code
+
+        print(f"Success: {file_to_pass}")
+    print("Success!")
+    return 0
 
 
 def main() -> int:
@@ -179,18 +267,20 @@ def main() -> int:
     This program prepares a branch for merging
     by formatting, linting, and statically analyzing Python code.
     """
+    args = get_arguments()  # type: ignore[no-untyped-call]
 
-    args = get_arguments()
-
-    if args.format:
-        mode = Mode.FORMAT
-    elif args.lint:
-        mode = Mode.LINT
-    elif args.verify:
-        mode = Mode.VERIFY
+    config = {Mode.CHECK: args.check}
+    if (args.format, args.lint, args.verify) == (False, False, False):
+        config[Mode.ALL] = True
     else:
-        mode = Mode.ALL
+        config.update({Mode.FORMAT: args.format, Mode.LINT: args.lint, Mode.VERIFY: args.verify})
 
+    repo_name_str = Repo(".", search_parent_directories=True).working_tree_dir
+    if repo_name_str is None:
+        print("Error: Unable to locate repo root.", file=sys.stderr)
+        return 1
+
+    repo_name = Path(repo_name_str).name
     tmp_path = Path(gettempdir(), "presubmit")
     try:
         revision_dir = create_tmp_dir(tmp_path)
@@ -199,51 +289,8 @@ def main() -> int:
         return 1
 
     files_to_pass = determine_file_list(args)
-
-    for file_to_pass in files_to_pass:
-        tmp_file_location = revision_dir / file_to_pass.name
-
-        print(f"Checking {file_to_pass}...")
-        with file_to_pass.open("r", encoding="utf-8") as working_file:
-            code = working_file.read()
-
-        # run formatting tool and overwrite the file
-        if mode in (Mode.ALL, Mode.FORMAT):
-            result = fmt(code)
-            if result.return_code != 0:
-                print(result.data, file=sys.stderr)
-                return result.return_code
-
-            code = result.data
-            shutil.copyfile(file_to_pass, tmp_file_location)
-            with file_to_pass.open("w", encoding="utf-8") as working_file:
-                working_file.write(code)
-            print(
-                f"Successfully formatted {file_to_pass}!\n"
-                f"The original file can be found at: {tmp_file_location.resolve()}"
-            )
-
-        if mode in (Mode.ALL, Mode.LINT):
-            result = lint(code)
-            if result.return_code != 0:
-                print(result.data, file=sys.stderr)
-                print(f"Failed to lint {file_to_pass}.")
-                return result.return_code
-
-            print(f"Linted {file_to_pass} successfully.")
-
-        if mode in (Mode.ALL, Mode.VERIFY):
-            result = verify(code)
-            if result.return_code != 0:
-                print(result.data, file=sys.stderr)
-                print(f"Failed to verify {file_to_pass}.")
-                return result.return_code
-
-            print(f"Validated {file_to_pass} successfully.")
-
-        print("")
-
-    return 0
+    print(f"Temporary directory in use: {revision_dir}")
+    return presubmit_handler(files_to_pass, repo_name, revision_dir, config)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,7 @@
 import subprocess
 
-from .ToolOutput import ToolOutput
+from lintAndFormatChanges.tools.ToolOutput import ToolOutput
+from lintAndFormatChanges.tools.globals import PYTHON_COMMAND
 
 
 def _remove_newlines_from_file(code: str) -> str:
@@ -27,7 +28,7 @@ def _remove_newlines_from_file(code: str) -> str:
 
 def _isort(code: str) -> ToolOutput:
     isort_cmd = [
-        "python3",
+        PYTHON_COMMAND,
         "-m",
         "isort",
         "--settings-file",
@@ -48,7 +49,7 @@ def _isort(code: str) -> ToolOutput:
 
 def _black(code: str) -> ToolOutput:
     black_cmd = [
-        "python3",
+        PYTHON_COMMAND,
         "-m",
         "black",
         "--config",

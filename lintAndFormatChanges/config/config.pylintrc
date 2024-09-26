@@ -63,7 +63,7 @@ ignored-modules=
 
 # Python code to execute, usually for sys.path manipulation such as
 # pygtk.require().
-#init-hook=
+init-hook='import sys; sys.path.append("api/src/")'
 
 # Use multiple processes to speed up Pylint. Specifying 0 will auto-detect the
 # number of processors available to use, and will cap the count on Windows to
@@ -277,7 +277,7 @@ ignored-parents=
 max-args=5
 
 # Maximum number of attributes for a class (see R0902).
-max-attributes=7
+max-attributes=8
 
 # Maximum number of boolean expressions in an if statement (see R0916).
 max-bool-expr=5
@@ -307,8 +307,8 @@ min-public-methods=2
 [EXCEPTIONS]
 
 # Exceptions that will emit a warning when caught.
-overgeneral-exceptions=BaseException,
-                       Exception
+overgeneral-exceptions=builtins.BaseException,
+                       builtins.Exception
 
 
 [FORMAT]
@@ -417,6 +417,13 @@ disable=missing-module-docstring,
         useless-suppression,
         deprecated-pragma,
         use-symbolic-message-instead,
+        too-few-public-methods,
+        too-many-return-statements,
+        useless-return,  # conflicts with mypy's default settings
+        too-many-locals,
+        too-many-statements,
+        too-many-branches,
+        wrong-import-order,
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option
